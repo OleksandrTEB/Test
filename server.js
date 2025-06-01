@@ -1,47 +1,32 @@
-const http = require('http');
+const express = require('express');
+const path = require('path');
 const fs = require('fs');
 
-const PORT = 8080;
+const app = express();
 
-const server = http.createServer((req, res) => {
-  if (req.method === 'POST' && req.url === '/submit') {
-    let body = '';
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
+app.use(express.static(path.join(__dirname, 'public')));
 
-    req.on('end', () => {
-      const params = new URLSearchParams(body);
-      const name = params.get('name') || '';
-      const email = params.get('email') || '';
-      const message = params.get('message') || '';
+app.post('/submit', (req, res) => {
+  const formData = req.body;
 
-      const data = `Имя: ${name}\nEmail: ${email}\nСообщение: ${message}\n----------------\n`;
+  // Формируем строку для записи
+  const dataString = `Имя: ${formData.name}, Email: ${formData.email}\n`;
 
-      fs.appendFile('form_data.txt', data, { encoding: 'utf8' }, (err) => {
-        if (err) {
-          res.writeHead(500, {'Content-Type': 'text/plain'});
-          res.end('Ошибка сервера');
-          return;
-        }
-        res.writeHead(200, {'Content-Type': 'text/plain'});
-        res.end('Данные получены и сохранены!');
-      });
-    });
-  } else {
-    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-    res.end(`
-      <form method="POST" action="/submit">
-        <input type="text" name="name" placeholder="Имя" required><br>
-        <input type="email" name="email" placeholder="Email" required><br>
-        <textarea name="message" placeholder="Сообщение" required></textarea><br>
-        <button type="submit">Отправить</button>
-      </form>`
-    );
-  }
+  // Добавляем в файл data.txt
+  fs.appendFile('data.txt', dataString, (err) => {
+    if (err) {
+      console.error('Ошибка записи в файл:', err);
+      return res.status(500).send('Ошибка сервера');
+    }
+    console.log('Данные сохранены в файл');
+    res.send('Спасибо! Данные получены и сохранены.');
+  });
 });
 
-server.listen(PORT, () => {
-  console.log(`Сервер запущен на http://localhost:${PORT}`);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server запущен на порту ${PORT}`);
 });
